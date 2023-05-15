@@ -1,32 +1,34 @@
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi import FastAPI, Depends
 from app.schemas import Usuario
 from app.models.db import get_db
 from sqlalchemy.orm import Session
 from app.models import models
+from datetime import datetime
 
 
-router = APIRouter(
+gestionarUsuarios = APIRouter(
     prefix= "/usuarios", tags=["Usuarios"]
     
 )
 
-usuarios = []
 
 #GetUsuarios
-@router.get("/")
-def recibirUsuario(db:Session = Depends(get_db)):
-    data = db.query(models.Usuario).all()
-    return data
+@gestionarUsuarios.get("/listar", response_model=list[Usuario])
+def listar_usuarios(db:Session = Depends(get_db)) -> list:
+    usuarios = db.query(models.Usuario).all()
+    return [usuario.__dict__ for usuario in usuarios]
 
 #RegistrarUsuarios
-@router.post("/")
-def crearUsuario(user:Usuario, db:Session = Depends(get_db)):
+@gestionarUsuarios.post("/crear")
+def crear_usuario(user:Usuario, db:Session = Depends(get_db)):
+    usuario = db.query(models.Usuario).filter(models.Usuario.id == user.id).first()
+    if usuario is not None:
+        raise HTTPException(status_code = 500, detail = {"message": "Usuario Existente"})
     usuario = user.dict()
-    
     nuevoUsuario = models.Usuario(
-        id = usuario[id],
+        id = usuario["id"],
         nombre = usuario["nombre"],
         apellidoPaterno = usuario["apellidoPaterno"],
         apellidoMaterno = usuario["apellidoMaterno"],
@@ -38,43 +40,46 @@ def crearUsuario(user:Usuario, db:Session = Depends(get_db)):
         email = usuario["email"],
         celular = usuario["celular"],
         fechaCreacion = usuario["fechaCreacion"],
-        
     )
     db.add(nuevoUsuario)
     db.commit()
-    db.refresh()
-    return True
+    db.refresh(nuevoUsuario)
+    return nuevoUsuario.__dict__
 
 #Get Usuario por ID
-@router.get("/{id}")
-def recibirUsuarioById(id:int):
-    for usuario in usuarios:
-        if usuario["id"] == id:
-            return usuario 
-
+@gestionarUsuarios.get("/{id}")
+def recibir_usuario(id:int, db:Session = Depends(get_db)):
+    usuario = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    if usuario is None:
+        raise HTTPException(status_code=404,detail ={"message": "Usuario no existe"})
+    return usuario.__dict__
 #Borrar Usuario por ID
-@router.delete("/{id}")
-def eliminarUsuario(id:int):
-    for usuario in usuarios:
-        if usuario["id"] == id:
-            usuarios.remove(usuario)
-            return usuario
+@gestionarUsuarios.delete("/borrar/{id}")
+def eliminarUsuario(id:int, db:Session = Depends(get_db)):
+    
+    usuario = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    if usuario is None:
+        raise HTTPException(status_code=404, detail= {"message": "Usuario no existe"})
+    usuario.delete()
+    return usuario.__dict__
         
 #Actualizar Usuario por ID
-@router.put("/{id}")
-def actualizarUsuario(id:int, usuarioEditar:Usuario):
-    for index, usuario in enumerate(usuarios):
-        if usuario["id"] == id:
-            usuario[index]["nombre"] = usuarioEditar.dict()["nombre"]
-            usuario[index]["apellidoPaterno"] = usuarioEditar.dict()["apellidoPaterno"]
-            usuario[index]["apellidoMaterno"] = usuarioEditar.dict()["apellidoMaterno"]
-            usuario[index]["direccion"] = usuarioEditar.dict()["direccion"]
-            usuario[index]["tipoDocumento"] = usuarioEditar.dict()["tipoDocumento"]
-            usuario[index]["foto"] = usuarioEditar.dict()["foto"]
-            usuario[index]["rol_id"] = usuarioEditar.dict()["rol_id"]
-            usuario[index]["contraseña"] = usuarioEditar.dict()["contraseña"]
-            usuario[index]["email"] = usuarioEditar.dict()["email"]
-            usuario[index]["celular"] = usuarioEditar.dict()["celular"]
-            usuario[index]["fechaCreacion"] = usuarioEditar.dict()["fechaCreacion"]
+@gestionarUsuarios.put("/actualizar/{id}")
+def actualizarUsuario(id:int, usuarioEditar:Usuario, db:Session = Depends(get_db)):
+    usuario = db.query(models.Usuario).filter(models.Usuario.id == id).first()
+    if usuario is None:
+        raise HTTPException(status_code=404,detail ={"message": "Usuario no existe"})
+    usuario.nombre = usuarioEditar.dict()["nombre"]
+    usuario.apellidoPaterno = usuarioEditar.dict()["apellidoPaterno"]
+    usuario.apellidoMaterno = usuarioEditar.dict()["apellidoMaterno"]
+    usuario.direccion = usuarioEditar.dict()["direccion"]
+    usuario.tipoDocumento = usuarioEditar.dict()["tipoDocumento"]
+    usuario.foto = usuarioEditar.dict()["foto"]
+    usuario.rol_id = usuarioEditar.dict()["rol_id"]
+    usuario.contraseña = usuarioEditar.dict()["contraseña"]
+    usuario.email = usuarioEditar.dict()["email"]
+    usuario.celular = usuarioEditar.dict()["celular"]
+    usuario.fechaCreacion = usuarioEditar.dict()["fechaCreacion"]
+    return usuario.__dict__
     
             

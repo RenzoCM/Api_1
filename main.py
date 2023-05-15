@@ -8,8 +8,8 @@ def create_tables():
 create_tables()
 
 app = FastAPI()
-app.include_router(usuario.router)
-app.include_router(rol.router)
+app.include_router(usuario.gestionarUsuarios)
+app.include_router(rol.gestionarRoles)
 
 #Corre el sv desde main.py
 if __name__ == '__main__':

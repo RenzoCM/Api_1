@@ -1,61 +1,53 @@
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from fastapi import FastAPI, Depends
+from fastapi import HTTPException
 from app.schemas import Rol
 from app.models.db import get_db
 from sqlalchemy.orm import Session
 from app.models import models
 
 
-router = APIRouter(
+gestionarRoles = APIRouter(
     prefix= "/roles", tags=["Roles"]
     
 )
 
-roles = []
+#*Listar Roles
+@gestionarRoles.get("/listar", response_model=list[Rol])
+def listar_roles(db: Session = Depends(get_db)) -> list:
+    roles = db.query(models.Roles).all()
+    return [rol.__dict__ for rol in roles]
 
-#GetRoles
-@router.get("/")
-def getRoles(db:Session = Depends(get_db)):
-    data = db.query(models.Roles).all()
-    return data
+#*Obtener Rol por id
+@gestionarRoles.get("/{id}", response_model=Rol)
+def obtener_rol(id: int, db: Session = Depends(get_db)):
+    rol = db.query(models.Roles).filter(models.Roles.id == id).first()
+    if rol is None:
+        raise HTTPException(status_code=404, detail = "Rol no encontrado")
+    return rol.__dict__
 
-#RegistrarRoles
-@router.post("/")
-def crearRol(Rol:Rol, db:Session = Depends(get_db)):
-    rol = Rol.dict()
-    
-    nuevoRol = models.Roles(
-        id = rol["id"],
-        nombre = rol["nombre"],
-        
-    )
-    db.add(nuevoRol)
+@gestionarRoles.post("/crear", response_model=Rol)
+def crear_rol(rol: Rol, db: Session = Depends(get_db)):
+    rol_db = db.query( models.Roles).filter( models.Roles.id == rol.id).first()
+    if rol_db is not None:
+        raise HTTPException(status_code=500 , detail={"message": "Rol Existente"})
+    rol_db =  models.Roles(id =rol.id, nombre = rol.nombre)
+    db.add(rol_db)
     db.commit()
-    db.refresh()
-    return True
+    db.refresh(rol_db)
+    return rol_db.__dict__
 
-#Get Rol  por ID
-@router.get("/{id}")
-def recibirRolById(id:int):
-    for rol in roles:
-        if rol["id"] == id:
-            return rol 
+@gestionarRoles.put("/actualizar/{id}", response_model=Rol)
+def actualizar_rol(id: int, rol: Rol, db: Session = Depends(get_db)):
+    rol_db = db.query( models.Roles).filter( models.Roles.id == id).first()
+    if rol_db is None:
+        raise HTTPException(status_code=404, detail={"message": "Rol no encontrado"})
+    rol_db.nombre = rol.nombre
+    db.commit()
+    db.refresh(rol_db)
+    return rol_db.__dict__
 
-#Borrar Rol por ID
-@router.delete("/{id}")
-def eliminarRol(id:int):
-    for rol in roles:
-        if rol["id"] == id:
-            roles.remove(rol)
-            return rol
-        
-#Actualizar Rol por ID
-@router.put("/{id}")
-def actualizarRol(id:int, rolAEditar:Rol):
-    for index, rol in enumerate(roles):
-        if rol["id"] == id:
-            rol[index]["nombre"] = rolAEditar.dict()["nombre"]
-            
             
  

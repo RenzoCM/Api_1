@@ -3,21 +3,21 @@ from typing import Optional
 from datetime import datetime
 
 class Usuario(BaseModel):
-    id:int
-    nombre = str
-    apellidoPaterno = str
-    apellidoMaterno = str
-    direccion = str
-    tipoDocumento = str
-    foto = str
-    rol_id = int
-    contraseña = str
-    email = str
-    celular = int
+    id: int
+    nombre : str
+    apellidoPaterno : str
+    apellidoMaterno : str
+    direccion : str
+    tipoDocumento : str
+    foto : str
+    rol_id : int
+    contraseña : str
+    email : str
+    celular : int
     direccion: Optional[str]
-    fechaCreacion: datetime = datetime.now().strftime("%d/%m/%Y")
+    fechaCreacion: datetime = datetime.now()
     
 
 class Rol(BaseModel):
-    id:int
-    nombre:str
+    id: int
+    nombre: str
